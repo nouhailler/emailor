@@ -3,6 +3,7 @@ import { sx } from './lib/style';
 import { modelNameFromId } from './services/openRouter';
 import { simulatedSearchService } from './services/searchService';
 import { createOpenRouterSearchService } from './services/openRouterSearch';
+import { maybePersonalSearch } from './services/personalEmailSearch';
 import { useEmailSearch } from './hooks/useEmailSearch';
 import { useSettings } from './hooks/useSettings';
 import { useDesktopCapabilities } from './hooks/useDesktopCapabilities';
@@ -52,8 +53,15 @@ export function App() {
     [settings.apiKey, settings.selectedModel],
   );
 
-  // Lance la recherche réelle si OpenRouter est configuré, sinon propose de le faire.
   const launchSearch = () => {
+    // Exception : fournisseur d'email personnel (gmail…) → adresses perso, sans LLM.
+    const personal = maybePersonalSearch(form);
+    if (personal) {
+      setShowConfigNotice(false);
+      search.run(form, personal);
+      return;
+    }
+    // Sinon, recherche réelle via OpenRouter si configuré.
     if (modelConnected) {
       setShowConfigNotice(false);
       search.run(form, realService);

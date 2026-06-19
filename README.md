@@ -79,6 +79,9 @@ src/
   services/
     searchService.ts          Interfaces (SearchService/handlers) + service simulé
     openRouterSearch.ts       Service RÉEL : LLM OpenRouter + DNS réel → scénario honnête
+    personalEmailSearch.ts    Exception : adresses perso (gmail…) sans LLM
+    freeProviders.ts          Détection des fournisseurs perso + génération de formats
+    techCheck.ts              Section « vérif technique » à partir du DNS réel (partagé)
     llmPrompt.ts              Invite système/utilisateur du LLM (honnêteté stricte)
     revealScenario.ts         Scheduler de révélation progressive (partagé)
     buildScenario.ts          Scénario FICTIF (démo : cas « Dupont » + générique)
@@ -105,8 +108,13 @@ src/
 Tout service expose `run(input, handlers): cancel` et émet les mêmes callbacks dans
 le même ordre ; le hook `useEmailSearch` les branche sur l'état React, sans rien
 connaître de la source. `revealScenario()` fait défiler un `Scenario` complet à la
-cadence de la maquette. Deux implémentations :
+cadence de la maquette. Trois implémentations :
 
+- **`personalEmailSearch` (exception, prioritaire)** — si la Société (ou le Domaine)
+  est un **fournisseur d'email personnel** (`gmail`, `outlook`, `hotmail`, `yahoo`,
+  `proton`, `icloud`, `orange`…), on ne cherche PAS l'entreprise correspondante : on
+  génère les formats personnels (`prénom.nom@gmail.com`, `prénomnom@…`, `nom.prénom@…`)
+  et on vérifie le domaine en DNS réel. Sans LLM, sans section identité.
 - **`openRouterSearch` (réel, par défaut quand configuré)** — interroge le modèle
   OpenRouter pour le raisonnement, la résolution d'identité, le format et les
   hypothèses d'adresses, **vérifie les domaines en DNS réel** (DoH), puis fait défiler
@@ -114,8 +122,9 @@ cadence de la maquette. Deux implémentations :
 - **`simulatedSearchService` (démo)** — scénario **fictif** (`buildScenario`, cas
   vedette « Dupont »), lancé via le bouton « Lancer une démo (données fictives) ».
 
-L'App choisit le service réel dès qu'une **clé API + un modèle** sont configurés ;
-sinon elle affiche une notice invitant à configurer OpenRouter (ou à lancer la démo).
+À la recherche, l'App teste d'abord l'exception « email personnel » ; sinon elle
+choisit le service réel dès qu'une **clé API + un modèle** sont configurés ; sinon
+elle affiche une notice invitant à configurer OpenRouter (ou à lancer la démo).
 
 ### Honnêteté du service réel
 
