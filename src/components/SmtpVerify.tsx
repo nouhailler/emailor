@@ -4,6 +4,8 @@ import { verifySmtp, type SmtpResult, type SmtpStatus } from '../services/deskto
 
 interface Props {
   email: string;
+  /** Remonte le résultat (pour recalculer le score de confiance). */
+  onResult?: (result: SmtpResult) => void;
 }
 
 interface Tone {
@@ -44,7 +46,7 @@ function reliabilityNote(status: SmtpStatus): string {
   }
 }
 
-export function SmtpVerify({ email }: Props) {
+export function SmtpVerify({ email, onResult }: Props) {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<SmtpResult | null>(null);
   const [error, setError] = useState('');
@@ -54,7 +56,9 @@ export function SmtpVerify({ email }: Props) {
     setError('');
     setResult(null);
     try {
-      setResult(await verifySmtp(email));
+      const r = await verifySmtp(email);
+      setResult(r);
+      onResult?.(r);
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Erreur');
     } finally {

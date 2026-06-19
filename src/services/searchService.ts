@@ -8,7 +8,6 @@ import type {
   IdentitySignal,
   ReasonLine,
   Source,
-  ScoringRow,
   SearchInput,
   TechTest,
 } from '../types';
@@ -24,7 +23,6 @@ export interface SearchHandlers {
   onFormat(format: EmailFormat): void;
   onIdentity(identity: IdentityHeader): void;
   onSignal(signal: IdentitySignal): void;
-  onTechScoring(rows: ScoringRow[]): void;
   onTechTest(test: TechTest): void;
   onCandidateTesting(candidate: Candidate): void;
   onCandidateFinal(email: string, statusFinal: Candidate['statusFinal']): void;

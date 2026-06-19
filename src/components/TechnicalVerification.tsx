@@ -1,10 +1,9 @@
 import { sx } from '../lib/style';
 import { sectionLabel } from '../lib/theme';
-import type { ScoringRow, TechStatus, TechTest } from '../types';
+import type { TechStatus, TechTest } from '../types';
 
 interface Props {
   tests: TechTest[];
-  scoring: ScoringRow[];
 }
 
 const STATUS_TONE: Record<TechStatus, { bg: string; color: string }> = {
@@ -18,7 +17,7 @@ function badgeLabel(t: TechTest): string {
   return t.fiab != null ? `Fiabilité ${t.fiab}` : t.statusLabel ?? '';
 }
 
-export function TechnicalVerification({ tests, scoring }: Props) {
+export function TechnicalVerification({ tests }: Props) {
   return (
     <>
       <div style={{ ...sx(sectionLabel), margin: '6px 0 10px' }}>
@@ -91,46 +90,6 @@ export function TechnicalVerification({ tests, scoring }: Props) {
           );
         })}
       </div>
-
-      {scoring.length > 0 && (
-        <div
-          style={sx(
-            'background:#fff;border:1px solid rgba(0,0,0,0.09);border-radius:11px;overflow:hidden;margin-bottom:22px;animation:fadeUp .25s ease;',
-          )}
-        >
-          <div
-            style={sx(
-              'display:flex;align-items:center;justify-content:space-between;padding:10px 15px;background:#f6f6f8;border-bottom:1px solid rgba(0,0,0,0.07);',
-            )}
-          >
-            <span style={sx('font-size:11px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:rgba(0,0,0,0.5);')}>
-              Signal
-            </span>
-            <span style={sx('font-size:11px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:rgba(0,0,0,0.5);')}>
-              Poids
-            </span>
-          </div>
-          {scoring.map((row, i) => (
-            <div
-              key={i}
-              style={sx(
-                'display:flex;align-items:center;justify-content:space-between;gap:14px;padding:10px 15px;border-top:1px solid rgba(0,0,0,0.05);',
-              )}
-            >
-              <span style={sx('font-size:13px;color:rgba(0,0,0,0.72);')}>{row.signal}</span>
-              <span
-                style={sx(
-                  `font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:${
-                    row.pos ? '#1a8f57' : '#c01c28'
-                  };flex:none;`,
-                )}
-              >
-                {row.weight}
-              </span>
-            </div>
-          ))}
-        </div>
-      )}
     </>
   );
 }

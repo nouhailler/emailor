@@ -8,7 +8,6 @@ import type {
   IdentitySignal,
   Phase,
   ReasonLine,
-  ScoringRow,
   SearchInput,
   Source,
   TechTest,
@@ -23,7 +22,6 @@ const EMPTY = {
   identity: null as IdentityHeader | null,
   idSignals: [] as IdentitySignal[],
   techTests: [] as TechTest[],
-  techScoring: [] as ScoringRow[],
   best: null as Candidate | null,
 };
 
@@ -37,7 +35,6 @@ export interface EmailSearchState {
   identity: IdentityHeader | null;
   idSignals: IdentitySignal[];
   techTests: TechTest[];
-  techScoring: ScoringRow[];
   best: Candidate | null;
   copied: boolean;
 }
@@ -78,7 +75,6 @@ export function useEmailSearch(): EmailSearch {
         onFormat: (format) => setState((s) => ({ ...s, format })),
         onIdentity: (identity) => setState((s) => ({ ...s, identity })),
         onSignal: (sig) => setState((s) => ({ ...s, idSignals: [...s.idSignals, sig] })),
-        onTechScoring: (rows) => setState((s) => ({ ...s, techScoring: rows })),
         onTechTest: (t) => setState((s) => ({ ...s, techTests: [...s.techTests, t] })),
         onCandidateTesting: (c) => setState((s) => ({ ...s, candidates: [...s.candidates, c] })),
         onCandidateFinal: (email, statusFinal) =>

@@ -79,14 +79,6 @@ export function buildDnsTechCheck(primary: DomainLookup | undefined): Scenario['
   });
 
   return {
-    scoring: [
-      { signal: 'Domaine valide (DNS réel)', weight: '+10', pos: true },
-      { signal: "Format observé chez l'entreprise", weight: '+30', pos: true },
-      { signal: 'Identité résolue avec confiance', weight: '+30', pos: true },
-      { signal: 'Adresse observée publiquement', weight: '+40', pos: true },
-      { signal: 'SMTP favorable (vérif desktop)', weight: '+20', pos: true },
-      { signal: 'Domaine Catch-All', weight: '-30', pos: false },
-    ],
     tests: [
       dnsTest,
       providerTest,

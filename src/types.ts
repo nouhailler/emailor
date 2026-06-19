@@ -101,14 +101,7 @@ export interface TechTest {
   verdict: string;
 }
 
-export interface ScoringRow {
-  signal: string;
-  weight: string;
-  pos: boolean;
-}
-
 export interface TechCheck {
-  scoring: ScoringRow[];
   tests: TechTest[];
 }
 

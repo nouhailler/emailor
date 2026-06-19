@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { sx } from '../lib/style';
 import { sectionLabel } from '../lib/theme';
 import { SmtpVerify } from './SmtpVerify';
+import type { SmtpResult } from '../services/desktopApi';
 import type {
   Candidate,
   CandidateStatus,
@@ -25,10 +26,16 @@ interface Props {
   nativeSmtp?: boolean;
   /** Mode « sources publiques uniquement » : désactive les sondes actives (SMTP). */
   publicOnly?: boolean;
+  /** Confiance calculée pour l'adresse retenue (remplace le score brut sur la carte). */
+  computedScore?: number | null;
+  /** Remonte le résultat SMTP (recalcul du score). */
+  onSmtpResult?: (result: SmtpResult) => void;
   /** Bloc « Résolution d'identité », rendu en tête des résultats. */
   identitySlot?: ReactNode;
   /** Bloc « Vérification technique », rendu entre les sources et les adresses testées. */
   techSlot?: ReactNode;
+  /** Tableau de score calculé, rendu après la vérification technique. */
+  scoreSlot?: ReactNode;
 }
 
 const tone = {
@@ -370,8 +377,11 @@ export function ResultsList({
   candidates,
   nativeSmtp,
   publicOnly,
+  computedScore,
+  onSmtpResult,
   identitySlot,
   techSlot,
+  scoreSlot,
 }: Props) {
   return (
     <>
@@ -406,8 +416,12 @@ export function ResultsList({
             </div>
           </div>
           <div style={sx('text-align:right;flex:none;')}>
-            <div style={sx('font-size:22px;font-weight:700;color:#1a8f57;line-height:1;')}>{best.score} %</div>
-            <div style={sx('font-size:11px;color:rgba(0,0,0,0.5);')}>confiance</div>
+            <div style={sx('font-size:22px;font-weight:700;color:#1a8f57;line-height:1;')}>
+              {computedScore ?? best.score} %
+            </div>
+            <div style={sx('font-size:11px;color:rgba(0,0,0,0.5);')}>
+              {computedScore != null ? 'confiance calculée' : 'confiance'}
+            </div>
           </div>
           <button
             onClick={onCopy}
@@ -433,13 +447,14 @@ export function ResultsList({
             uniquement&nbsp;» dans les Paramètres pour l'activer.
           </div>
         ) : (
-          <SmtpVerify email={best.email} />
+          <SmtpVerify email={best.email} onResult={onSmtpResult} />
         ))}
 
       {domains.length > 0 && <DomainsSection domains={domains} />}
       {format && <FormatSection format={format} />}
       {sources.length > 0 && <SourcesSection sources={sources} />}
       {techSlot}
+      {scoreSlot}
       {candidates.length > 0 && <CandidatesSection candidates={candidates} />}
     </>
   );

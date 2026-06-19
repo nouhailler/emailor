@@ -146,14 +146,6 @@ export function buildScenario(input: SearchInput): Scenario {
         ],
       },
       techCheck: {
-        scoring: [
-          { signal: 'Domaine valide', weight: '+10', pos: true },
-          { signal: "Format observé chez l'entreprise", weight: '+30', pos: true },
-          { signal: 'Identité résolue avec confiance', weight: '+30', pos: true },
-          { signal: 'Adresse observée publiquement', weight: '+40', pos: true },
-          { signal: 'SMTP favorable', weight: '+20', pos: true },
-          { signal: 'Domaine Catch-All', weight: '-30', pos: false },
-        ],
         tests: [
           {
             num: 1,
@@ -313,14 +305,6 @@ export function buildScenario(input: SearchInput): Scenario {
       ],
     },
     techCheck: {
-      scoring: [
-        { signal: 'Domaine valide', weight: '+10', pos: true },
-        { signal: "Format observé chez l'entreprise", weight: '+30', pos: true },
-        { signal: 'Identité résolue avec confiance', weight: '+30', pos: true },
-        { signal: 'Adresse observée publiquement', weight: '+40', pos: true },
-        { signal: 'SMTP favorable', weight: '+20', pos: true },
-        { signal: 'Domaine Catch-All', weight: '-30', pos: false },
-      ],
       tests: [
         {
           num: 1,

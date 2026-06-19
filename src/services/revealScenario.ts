@@ -48,7 +48,6 @@ export function revealScenario(
     (sc.identity.signals ?? []).forEach((sig, i) => at(1100 + i * 450, () => handlers.onSignal(sig)));
   }
 
-  at(1500, () => handlers.onTechScoring(sc.techCheck.scoring));
   sc.techCheck.tests.forEach((t, i) => at(1700 + i * 480, () => handlers.onTechTest(t)));
 
   sc.reasoning.forEach((l, i) => at(450 + i * 600, () => handlers.onReasoning(l)));

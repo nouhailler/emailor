@@ -82,6 +82,7 @@ src/
     personalEmailSearch.ts    Exception : adresses perso (gmail…) sans LLM
     freeProviders.ts          Détection des fournisseurs perso + génération de formats
     techCheck.ts              Section « vérif technique » à partir du DNS réel (partagé)
+    scoring.ts                Score de confiance CALCULÉ (signaux vérifiés) + explications
     llmPrompt.ts              Invite système/utilisateur du LLM (honnêteté stricte)
     revealScenario.ts         Scheduler de révélation progressive (partagé)
     buildScenario.ts          Scénario FICTIF (démo : cas « Dupont » + générique)
@@ -96,7 +97,8 @@ src/
     PingAddress.tsx           Ping DNS réel de l'adresse trouvée (sous la recherche)
     ReasoningPanel.tsx        Journal de raisonnement de l'IA (colonne gauche)
     IdentityResolution.tsx    Identité consolidée + candidats + 5 signaux
-    TechnicalVerification.tsx 5 tests techniques + tableau de pondération
+    TechnicalVerification.tsx 5 tests techniques (DNS/fournisseur/catch-all/SMTP…)
+    ScorePanel.tsx            Score de confiance calculé, lignes cliquables (explications)
     ResultsList.tsx           Adresse identifiée, domaines, format, sources, candidats
     SettingsDialog.tsx        Dialogue Paramètres
     NameNormalizationRules.tsx Accordéon des 11 pays
@@ -146,6 +148,26 @@ publique fiable. Côté code :
 
 La **vérification SMTP réelle** (`RCPT TO`) est désormais disponible **à la demande**
 dans l'application desktop native (voir plus haut) — pas dans le navigateur.
+
+### Score de confiance calculé (`scoring.ts` + `ScorePanel`)
+
+La confiance affichée pour l'adresse retenue n'est **pas** décorative : c'est la
+**somme des signaux réellement vérifiés** pour ce résultat précis, calculée par
+`computeScore()` :
+
+| Signal | Poids | Appliqué quand |
+| --- | --- | --- |
+| Domaine valide (DNS réel) | +10 | le domaine résout avec un MX (DoH) |
+| Format cohérent | +30 | le format dominant est déduit avec ≥ 50 % de confiance |
+| Identité résolue | +30 | identité résolue avec ≥ 60 % (jamais en mode email perso) |
+| Adresse observée publiquement | +40 | l'adresse exacte est vue dans une source publique |
+| SMTP favorable | +20 | la vérif SMTP (desktop) renvoie *deliverable* |
+| Domaine catch-all | −30 | la vérif SMTP révèle un catch-all |
+
+Seuls les signaux appliqués comptent ; le total est borné à 0–100. **Cliquer une
+ligne** du panneau « Score de confiance · calculé » explique le poids (méthodologie)
+et **pourquoi il s'applique — ou non — à ce résultat**. Le score se **recalcule** quand
+on lance la vérification SMTP (qui peut activer +20 ou la pénalité −30).
 
 ## Ping de l'adresse
 

@@ -4,6 +4,8 @@ import { modelNameFromId } from './services/openRouter';
 import { simulatedSearchService } from './services/searchService';
 import { createOpenRouterSearchService } from './services/openRouterSearch';
 import { maybePersonalSearch } from './services/personalEmailSearch';
+import { computeScore, type ScoreContext } from './services/scoring';
+import type { SmtpResult } from './services/desktopApi';
 import { useEmailSearch } from './hooks/useEmailSearch';
 import { useSettings } from './hooks/useSettings';
 import { useDesktopCapabilities } from './hooks/useDesktopCapabilities';
@@ -13,6 +15,7 @@ import { ReasoningPanel } from './components/ReasoningPanel';
 import { IdentityResolution } from './components/IdentityResolution';
 import { TechnicalVerification } from './components/TechnicalVerification';
 import { ResultsList } from './components/ResultsList';
+import { ScorePanel } from './components/ScorePanel';
 import { SettingsDialog } from './components/SettingsDialog';
 import { usePublicOnly } from './components/ComplianceNotice';
 import type { SearchInput } from './types';
@@ -26,6 +29,7 @@ export function App() {
   });
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [showConfigNotice, setShowConfigNotice] = useState(false);
+  const [smtpResult, setSmtpResult] = useState<SmtpResult | null>(null);
 
   const search = useEmailSearch();
   const settings = useSettings();
@@ -54,6 +58,7 @@ export function App() {
   );
 
   const launchSearch = () => {
+    setSmtpResult(null);
     // Exception : fournisseur d'email personnel (gmail…) → adresses perso, sans LLM.
     const personal = maybePersonalSearch(form);
     if (personal) {
@@ -72,9 +77,33 @@ export function App() {
 
   // Démo explicite à données FICTIVES (le cas vedette « Dupont »).
   const launchDemo = () => {
+    setSmtpResult(null);
     setShowConfigNotice(false);
     search.run(form, simulatedSearchService);
   };
+
+  const resetSearch = () => {
+    setSmtpResult(null);
+    setShowConfigNotice(false);
+    search.reset();
+  };
+
+  // Score de confiance CALCULÉ pour l'adresse retenue (recalculé si la vérif SMTP change).
+  const score = useMemo(() => {
+    if (!search.best) return null;
+    const domain = search.best.email.split('@')[1] ?? '';
+    const domainGuess = search.domains.find((d) => d.domain === domain);
+    const context: ScoreContext = {
+      domainVerified: domainGuess?.mx === true,
+      domainDetail: domainGuess?.mx === true ? `${domain} · MX présent` : domain || 'domaine inconnu',
+      formatPrimary: search.format?.primary ?? '—',
+      formatConfidence: search.format?.confidence ?? 0,
+      identityConfidence: search.identity?.confidence ?? null,
+      publiclyObserved: search.best.web === 'ok',
+      smtpStatus: smtpResult?.status,
+    };
+    return computeScore(context);
+  }, [search.best, search.domains, search.format, search.identity, smtpResult]);
 
   const modelChipLabel = settings.selectedModel
     ? modelNameFromId(settings.selectedModel, settings.models)
@@ -157,7 +186,7 @@ export function App() {
                   <div style={sx('font-size:17px;font-weight:700;color:rgba(0,0,0,0.85);')}>Résultats</div>
                   {hasResults && (
                     <button
-                      onClick={search.reset}
+                      onClick={resetSearch}
                       style={sx(
                         'border:1px solid rgba(0,0,0,0.14);background:#fff;border-radius:8px;padding:6px 13px;font-family:inherit;font-size:13px;font-weight:700;color:rgba(0,0,0,0.7);cursor:pointer;',
                       )}
@@ -243,6 +272,8 @@ export function App() {
                       candidates={search.candidates}
                       nativeSmtp={caps.smtp}
                       publicOnly={publicOnly}
+                      computedScore={search.phase === 'done' ? (score?.total ?? null) : null}
+                      onSmtpResult={setSmtpResult}
                       identitySlot={
                         search.identity && (
                           <IdentityResolution identity={search.identity} signals={search.idSignals} />
@@ -250,7 +281,12 @@ export function App() {
                       }
                       techSlot={
                         search.techTests.length > 0 && (
-                          <TechnicalVerification tests={search.techTests} scoring={search.techScoring} />
+                          <TechnicalVerification tests={search.techTests} />
+                        )
+                      }
+                      scoreSlot={
+                        search.phase === 'done' && score && (
+                          <ScorePanel signals={score.signals} total={score.total} />
                         )
                       }
                     />
