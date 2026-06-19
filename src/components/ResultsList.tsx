@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { sx } from '../lib/style';
 import { sectionLabel } from '../lib/theme';
+import { SmtpVerify } from './SmtpVerify';
 import type {
   Candidate,
   CandidateStatus,
@@ -20,6 +21,10 @@ interface Props {
   format: EmailFormat | null;
   sources: Source[];
   candidates: Candidate[];
+  /** Shell natif avec SMTP réel disponible (desktop). */
+  nativeSmtp?: boolean;
+  /** Mode « sources publiques uniquement » : désactive les sondes actives (SMTP). */
+  publicOnly?: boolean;
   /** Bloc « Résolution d'identité », rendu en tête des résultats. */
   identitySlot?: ReactNode;
   /** Bloc « Vérification technique », rendu entre les sources et les adresses testées. */
@@ -363,6 +368,8 @@ export function ResultsList({
   format,
   sources,
   candidates,
+  nativeSmtp,
+  publicOnly,
   identitySlot,
   techSlot,
 }: Props) {
@@ -412,6 +419,22 @@ export function ResultsList({
           </button>
         </div>
       )}
+
+      {showBest &&
+        best &&
+        nativeSmtp &&
+        (publicOnly ? (
+          <div
+            style={sx(
+              'margin:-8px 0 20px;font-size:12px;line-height:1.5;color:rgba(0,0,0,0.5);background:#fdf6e3;border:1px solid #efe1a6;border-radius:9px;padding:9px 12px;',
+            )}
+          >
+            Vérification SMTP réelle disponible (shell natif). Désactivez «&nbsp;Sources publiques
+            uniquement&nbsp;» dans les Paramètres pour l'activer.
+          </div>
+        ) : (
+          <SmtpVerify email={best.email} />
+        ))}
 
       {domains.length > 0 && <DomainsSection domains={domains} />}
       {format && <FormatSection format={format} />}

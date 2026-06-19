@@ -5,6 +5,7 @@ import { simulatedSearchService } from './services/searchService';
 import { createOpenRouterSearchService } from './services/openRouterSearch';
 import { useEmailSearch } from './hooks/useEmailSearch';
 import { useSettings } from './hooks/useSettings';
+import { useDesktopCapabilities } from './hooks/useDesktopCapabilities';
 import { SearchForm } from './components/SearchForm';
 import { PingAddress } from './components/PingAddress';
 import { ReasoningPanel } from './components/ReasoningPanel';
@@ -28,6 +29,7 @@ export function App() {
   const search = useEmailSearch();
   const settings = useSettings();
   const [publicOnly, setPublicOnly] = usePublicOnly();
+  const caps = useDesktopCapabilities();
 
   const patchForm = useCallback((patch: Partial<SearchInput>) => setForm((f) => ({ ...f, ...patch })), []);
 
@@ -231,6 +233,8 @@ export function App() {
                       format={search.format}
                       sources={search.sources}
                       candidates={search.candidates}
+                      nativeSmtp={caps.smtp}
+                      publicOnly={publicOnly}
                       identitySlot={
                         search.identity && (
                           <IdentityResolution identity={search.identity} signals={search.idSignals} />

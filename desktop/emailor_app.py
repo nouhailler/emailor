@@ -10,12 +10,16 @@ stockés dans ~/.local/share/emailor, donc conservés d'un lancement à l'autre.
 """
 from __future__ import annotations
 
+import json
 import os
 import shutil
 import subprocess
 import threading
+import urllib.parse
 from functools import partial
-from http.server import HTTPServer, SimpleHTTPRequestHandler
+from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
+
+import smtp_verify
 
 import gi
 
@@ -34,10 +38,29 @@ DATA_DIR = os.path.join(GLib.get_user_data_dir(), "emailor")
 
 
 class _QuietHandler(SimpleHTTPRequestHandler):
-    """Sert `dist/` sans rien journaliser sur stderr."""
+    """Sert `dist/` + expose l'API native locale, sans journaliser sur stderr."""
 
     def log_message(self, *_args):  # noqa: D401 - silence
         pass
+
+    def _json(self, obj, status: int = 200) -> None:
+        body = json.dumps(obj).encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        self.wfile.write(body)
+
+    def do_GET(self):  # noqa: N802 (API imposée par BaseHTTPRequestHandler)
+        parsed = urllib.parse.urlparse(self.path)
+        if parsed.path == "/api/health":
+            # Signale au front que les capacités natives (SMTP réel) sont disponibles.
+            return self._json({"desktop": True, "smtp": True})
+        if parsed.path == "/api/smtp":
+            email = (urllib.parse.parse_qs(parsed.query).get("email") or [""])[0]
+            return self._json(smtp_verify.verify_email(email))
+        return super().do_GET()
 
 
 def ensure_build() -> bool:
@@ -54,10 +77,13 @@ def ensure_build() -> bool:
     return os.path.exists(os.path.join(DIST, "index.html"))
 
 
-def start_server() -> tuple[HTTPServer, int]:
-    """Démarre un serveur HTTP local (port libre) servant `dist/`."""
+def start_server() -> tuple[ThreadingHTTPServer, int]:
+    """Démarre un serveur HTTP local (port libre) servant `dist/` + l'API native.
+
+    Threadé : une sonde SMTP (plusieurs secondes) ne bloque pas le chargement de l'UI.
+    """
     handler = partial(_QuietHandler, directory=DIST)
-    httpd = HTTPServer(("127.0.0.1", 0), handler)
+    httpd = ThreadingHTTPServer(("127.0.0.1", 0), handler)
     threading.Thread(target=httpd.serve_forever, daemon=True).start()
     return httpd, httpd.server_address[1]
 

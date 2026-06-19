@@ -39,8 +39,27 @@ npm run desktop
 ```
 
 Les réglages (clé API OpenRouter, modèle, mode conformité) sont persistés dans
-`~/.local/share/emailor`. Bonus : un shell natif rend possible la **vérification SMTP
-réelle** (`RCPT TO`) — impossible dans un navigateur — comme évolution future.
+`~/.local/share/emailor`.
+
+### Vérification SMTP réelle (natif uniquement)
+
+Le shell natif expose une **API locale** (`127.0.0.1`, non exposée au réseau) que le
+front appelle pour une **vraie vérification SMTP** — impossible dans un navigateur :
+
+- `desktop/smtp_verify.py` — résout les MX (DoH), ouvre une connexion SMTP et déroule
+  `HELO / MAIL FROM:<> / RCPT TO` **sans envoyer de message**, lit le code (250 / 550…),
+  et teste une adresse aléatoire pour détecter un domaine **catch-all** / anti-énumération.
+- Endpoints : `GET /api/health` (capacités) et `GET /api/smtp?email=…`.
+- Dans l'UI : bouton **« Vérifier la boîte (SMTP) »** sous l'adresse identifiée →
+  *Boîte confirmée* (vert) / *Boîte inexistante* (rouge) / *Indéterminé · catch-all*
+  (ambre) / *MX injoignable* (port 25 filtré).
+
+⚠️ **Compliance & limites** : la sonde SMTP est une action **active** → désactivée tant
+que le mode « Sources publiques uniquement » est actif (un indice invite à le couper).
+Le **port 25 sortant est souvent bloqué** par les FAI → statut *MX injoignable*. Les
+fournisseurs anti-énumération (M365, Google, Proofpoint) répondent 250 à tout le monde
+→ détecté comme *catch-all / indéterminé*. En mode web (navigateur), `/api/*` n'existe
+pas → la fonctionnalité est simplement masquée.
 
 ## Architecture
 
@@ -107,17 +126,13 @@ publique fiable. Côté code :
 - **DNS** des domaines : réel (DoH) → chips MX ✓/~/— et test « Vérification DNS »
   marqué *Vérifié*.
 - **Fournisseur mail** : déduit des vrais enregistrements MX.
-- **Catch-all / SMTP / anti-énumération** : marqués **« Non vérifié — backend
-  requis »**, jamais simulés en « valide ».
-- **Candidats** : tous **incertains** (aucune vérif SMTP), `SMTP ?`, `Web —`.
+- **Catch-all / SMTP / anti-énumération** dans la révélation auto : marqués
+  **« Non vérifié »**, jamais simulés en « valide ».
+- **Candidats** : tous **incertains** dans la révélation auto, `SMTP ?`, `Web —`.
 - **Sources analysées** : section masquée (rien n'est réellement scrapé).
 
-### Étape suivante (hors périmètre actuel)
-
-Les vérifications réseau **actives** (SMTP `RCPT TO`, catch-all, anti-énumération)
-exigent un **backend** (ports SMTP + CORS) et la validation conformité ci-dessous.
-Il suffira d'une 3ᵉ implémentation de `SearchService` côté serveur, émettant les
-mêmes callbacks.
+La **vérification SMTP réelle** (`RCPT TO`) est désormais disponible **à la demande**
+dans l'application desktop native (voir plus haut) — pas dans le navigateur.
 
 ## Ping de l'adresse
 
