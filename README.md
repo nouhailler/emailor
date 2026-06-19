@@ -10,7 +10,7 @@ Cette implémentation reproduit fidèlement la maquette de référence
 (`design_handoff_email_finder/Recherche email.dc.html`) en **React + Vite +
 TypeScript**, avec données simulées et révélation progressive (~5–6 s).
 
-## Démarrer
+## Démarrer (web)
 
 ```bash
 npm install
@@ -18,6 +18,29 @@ npm run dev      # http://localhost:5173
 npm run build    # typecheck (tsc -b) + bundle de production
 npm run preview  # sert le build
 ```
+
+## Application desktop Debian (sans navigateur)
+
+L'app peut tourner comme une **application native**, dans sa propre fenêtre, **sans
+ouvrir de navigateur**. Le dossier `desktop/` contient un lanceur Python qui sert le
+build `dist/` en local (sur `127.0.0.1`, invisible) et l'affiche dans une fenêtre
+**GTK** via le webview système **WebKit2GTK** — déjà présent sur GNOME/Debian. Aucune
+réécriture, aucune dépendance lourde (ni Electron, ni Rust).
+
+Prérequis (Debian/GNOME, généralement déjà installés) :
+`gir1.2-webkit2-4.1`, `gir1.2-gtk-3.0`, `python3-gi`.
+
+```bash
+# Lancer directement (build + fenêtre native)
+npm run desktop
+
+# …ou installer une entrée de menu + icône
+./desktop/install.sh        # crée ~/.local/share/applications/emailor.desktop
+```
+
+Les réglages (clé API OpenRouter, modèle, mode conformité) sont persistés dans
+`~/.local/share/emailor`. Bonus : un shell natif rend possible la **vérification SMTP
+réelle** (`RCPT TO`) — impossible dans un navigateur — comme évolution future.
 
 ## Architecture
 
