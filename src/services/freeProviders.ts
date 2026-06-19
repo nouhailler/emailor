@@ -9,44 +9,74 @@ import { slug } from '../lib/normalize';
 export interface FreeProvider {
   name: string;
   domain: string;
-  aliases: string[];
   /** Gmail ignore les points (prenom.nom == prenomnom, même boîte). */
   dotless?: boolean;
 }
 
-const PROVIDERS: FreeProvider[] = [
-  { name: 'Gmail', domain: 'gmail.com', aliases: ['gmail', 'googlemail', 'gmail.com', 'googlemail.com'], dotless: true },
-  {
-    name: 'Outlook / Hotmail',
-    domain: 'outlook.com',
-    aliases: ['outlook', 'hotmail', 'live', 'msn', 'outlook.com', 'hotmail.com', 'hotmail.fr', 'live.com', 'live.fr', 'msn.com'],
-  },
-  { name: 'Yahoo', domain: 'yahoo.com', aliases: ['yahoo', 'ymail', 'yahoo.com', 'yahoo.fr', 'ymail.com'] },
-  { name: 'Proton', domain: 'proton.me', aliases: ['proton', 'protonmail', 'proton.me', 'protonmail.com'] },
-  { name: 'iCloud', domain: 'icloud.com', aliases: ['icloud', 'icloud.com', 'me.com', 'mac.com'] },
-  { name: 'Orange', domain: 'orange.fr', aliases: ['orange', 'orange.fr', 'wanadoo', 'wanadoo.fr'] },
-  { name: 'SFR', domain: 'sfr.fr', aliases: ['sfr', 'sfr.fr', 'neuf.fr'] },
-  { name: 'La Poste', domain: 'laposte.net', aliases: ['laposte', 'laposte.net'] },
-  { name: 'Free', domain: 'free.fr', aliases: ['free.fr'] },
-];
+const GMAIL: FreeProvider = { name: 'Gmail', domain: 'gmail.com', dotless: true };
+
+/**
+ * Table alias → fournisseur résolu. Le **domaine saisi est respecté** : « hotmail »
+ * donne `@hotmail.com` (et non `@outlook.com`), « yahoo.fr » donne `@yahoo.fr`, etc.
+ */
+const ALIASES: Record<string, FreeProvider> = {
+  // Google
+  gmail: GMAIL,
+  'gmail.com': GMAIL,
+  googlemail: GMAIL,
+  'googlemail.com': { name: 'Gmail', domain: 'googlemail.com', dotless: true },
+  // Microsoft (domaines distincts, tous Microsoft)
+  hotmail: { name: 'Hotmail', domain: 'hotmail.com' },
+  'hotmail.com': { name: 'Hotmail', domain: 'hotmail.com' },
+  'hotmail.fr': { name: 'Hotmail', domain: 'hotmail.fr' },
+  outlook: { name: 'Outlook', domain: 'outlook.com' },
+  'outlook.com': { name: 'Outlook', domain: 'outlook.com' },
+  'outlook.fr': { name: 'Outlook', domain: 'outlook.fr' },
+  live: { name: 'Live', domain: 'live.com' },
+  'live.com': { name: 'Live', domain: 'live.com' },
+  'live.fr': { name: 'Live', domain: 'live.fr' },
+  msn: { name: 'MSN', domain: 'msn.com' },
+  'msn.com': { name: 'MSN', domain: 'msn.com' },
+  // Yahoo
+  yahoo: { name: 'Yahoo', domain: 'yahoo.com' },
+  'yahoo.com': { name: 'Yahoo', domain: 'yahoo.com' },
+  'yahoo.fr': { name: 'Yahoo', domain: 'yahoo.fr' },
+  ymail: { name: 'Yahoo', domain: 'yahoo.com' },
+  'ymail.com': { name: 'Yahoo', domain: 'ymail.com' },
+  // Proton
+  proton: { name: 'Proton', domain: 'proton.me' },
+  'proton.me': { name: 'Proton', domain: 'proton.me' },
+  protonmail: { name: 'Proton', domain: 'protonmail.com' },
+  'protonmail.com': { name: 'Proton', domain: 'protonmail.com' },
+  // Apple
+  icloud: { name: 'iCloud', domain: 'icloud.com' },
+  'icloud.com': { name: 'iCloud', domain: 'icloud.com' },
+  'me.com': { name: 'iCloud', domain: 'me.com' },
+  'mac.com': { name: 'iCloud', domain: 'mac.com' },
+  // FAI français
+  orange: { name: 'Orange', domain: 'orange.fr' },
+  'orange.fr': { name: 'Orange', domain: 'orange.fr' },
+  wanadoo: { name: 'Orange (Wanadoo)', domain: 'wanadoo.fr' },
+  'wanadoo.fr': { name: 'Orange (Wanadoo)', domain: 'wanadoo.fr' },
+  sfr: { name: 'SFR', domain: 'sfr.fr' },
+  'sfr.fr': { name: 'SFR', domain: 'sfr.fr' },
+  'neuf.fr': { name: 'SFR (Neuf)', domain: 'neuf.fr' },
+  laposte: { name: 'La Poste', domain: 'laposte.net' },
+  'laposte.net': { name: 'La Poste', domain: 'laposte.net' },
+  'free.fr': { name: 'Free', domain: 'free.fr' },
+};
 
 function normValue(v: string): string {
-  return (v || '').trim().toLowerCase();
+  return (v || '').trim().toLowerCase().replace(/^@/, '');
 }
 
 /**
  * Détecte un fournisseur personnel à partir de la Société ou du Domaine.
- * Le Domaine prime (s'il vaut gmail.com), sinon on regarde la Société.
+ * Le Domaine prime (s'il vaut hotmail.com), sinon on regarde la Société.
  */
 export function detectFreeProvider(societe: string, domaine: string): FreeProvider | null {
-  const dom = normValue(domaine);
-  const soc = normValue(societe);
-  for (const candidate of [dom, soc]) {
-    if (!candidate) continue;
-    const found = PROVIDERS.find(
-      (p) => p.aliases.includes(candidate) || candidate === p.domain || candidate.endsWith('@' + p.domain),
-    );
-    if (found) return found;
+  for (const candidate of [normValue(domaine), normValue(societe)]) {
+    if (candidate && ALIASES[candidate]) return ALIASES[candidate];
   }
   return null;
 }
@@ -80,8 +110,6 @@ export function personalCandidates(prenom: string, nom: string, provider: FreePr
   add(`${p}${n[0] ?? ''}`, 24, 'prénom + initiale du nom');
   add(`${p[0] ?? ''}${n}`, 22, 'initiale + nom');
 
-  // Déduplication (sur Gmail, prénom.nom et prénomnom mènent à la même boîte,
-  // mais restent deux graphies distinctes à proposer).
   const seen = new Set<string>();
   return raw.filter((c) => (seen.has(c.email) ? false : (seen.add(c.email), true))).sort((a, b) => b.score - a.score);
 }

@@ -113,8 +113,12 @@ cadence de la maquette. Trois implémentations :
 - **`personalEmailSearch` (exception, prioritaire)** — si la Société (ou le Domaine)
   est un **fournisseur d'email personnel** (`gmail`, `outlook`, `hotmail`, `yahoo`,
   `proton`, `icloud`, `orange`…), on ne cherche PAS l'entreprise correspondante : on
-  génère les formats personnels (`prénom.nom@gmail.com`, `prénomnom@…`, `nom.prénom@…`)
-  et on vérifie le domaine en DNS réel. Sans LLM, sans section identité.
+  génère les formats personnels (`prénom.nom`, `prénomnom`, `nom.prénom`…) sur le bon
+  domaine et on vérifie celui-ci en DNS réel. Sans LLM, sans section identité.
+  Le **domaine saisi est respecté** :
+  - `gmail` → `roger.dupont@gmail.com`
+  - `yahoo` → `roger.dupont@yahoo.com` (et `yahoo.fr` → `…@yahoo.fr`)
+  - `hotmail` → `roger.dupont@hotmail.com` · `outlook` → `…@outlook.com`
 - **`openRouterSearch` (réel, par défaut quand configuré)** — interroge le modèle
   OpenRouter pour le raisonnement, la résolution d'identité, le format et les
   hypothèses d'adresses, **vérifie les domaines en DNS réel** (DoH), puis fait défiler

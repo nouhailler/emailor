@@ -9,3 +9,6 @@ dist-ssr
 # Python
 __pycache__/
 *.pyc
+
+# Paquets Debian générés
+dist-deb/
