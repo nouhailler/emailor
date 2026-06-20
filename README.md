@@ -169,6 +169,26 @@ ligne** du panneau « Score de confiance · calculé » explique le poids (méth
 et **pourquoi il s'applique — ou non — à ce résultat**. Le score se **recalcule** quand
 on lance la vérification SMTP (qui peut activer +20 ou la pénalité −30).
 
+## Aide, astuces, onboarding & mode démo
+
+L'app est auto-explicative, sans avoir à lire ce README :
+
+- **Visite guidée (onboarding)** — au tout premier lancement, une visite en 7 étapes
+  met en surbrillance chaque zone (formulaire, ping, raisonnement, résultats, modèle &
+  journal réseau). Elle est mémorisée (`localStorage`) et **relançable** via le bouton
+  **« ? »** du bandeau. Composants : `useOnboarding.ts`, `Onboarding.tsx`, `data/help.ts`.
+- **Aide contextuelle** — de petites pastilles **« ? »** (`HelpTip.tsx`) près des champs
+  sensibles (Société → exception fournisseurs perso, Domaine connu → fiabilité) ouvrent
+  une bulle explicative.
+- **Astuces** — une carte **« Astuce »** rotative (`TipsRotator.tsx`) dans l'état vide
+  des résultats, et une astuce aléatoire dans le menu d'aide.
+- **Menu d'aide** — le bouton **« ? »** (`HelpButton.tsx`) regroupe : visite guidée,
+  mode démo, accès Paramètres/journal réseau.
+- **Mode démo** — le bouton **« Lancer la démo (données fictives) »** rejoue le cas
+  vedette « Roger Dupont » (scénario `buildScenario`). Un **bandeau « Mode démo »**
+  (`DemoBanner.tsx`) signale clairement que les données sont **fictives**, pour ne jamais
+  les confondre avec un vrai résultat.
+
 ## Ping de l'adresse
 
 Sous le bouton de recherche, la section **« Ping de l'adresse »** est pré-remplie avec

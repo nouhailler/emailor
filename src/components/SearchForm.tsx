@@ -1,6 +1,7 @@
 import type { KeyboardEvent } from 'react';
 import { sx } from '../lib/style';
 import { sectionLabel } from '../lib/theme';
+import { HelpTip } from './HelpTip';
 import type { SearchInput } from '../types';
 
 interface Props {
@@ -55,7 +56,10 @@ export function SearchForm({ value, searching, onChange, onSubmit }: Props) {
           />
         </div>
         <div style={sx('padding:9px 14px;border-top:1px solid rgba(0,0,0,0.07);')}>
-          <div style={fieldLabel}>Société</div>
+          <div style={sx('display:flex;align-items:center;gap:6px;')}>
+            <span style={fieldLabel}>Société</span>
+            <HelpTip text="Tapez un fournisseur perso (gmail, outlook, yahoo, proton…) ici pour générer directement des adresses personnelles prénom.nom@…, au lieu de chercher une entreprise." />
+          </div>
           <input
             value={value.societe}
             onChange={(e) => onChange({ societe: e.target.value })}
@@ -65,8 +69,11 @@ export function SearchForm({ value, searching, onChange, onSubmit }: Props) {
           />
         </div>
         <div style={sx('padding:9px 14px;border-top:1px solid rgba(0,0,0,0.07);')}>
-          <div style={fieldLabel}>
-            Domaine connu <span style={sx('font-weight:400;')}>(optionnel)</span>
+          <div style={sx('display:flex;align-items:center;gap:6px;')}>
+            <span style={fieldLabel}>
+              Domaine connu <span style={sx('font-weight:400;')}>(optionnel)</span>
+            </span>
+            <HelpTip text="Si vous connaissez le domaine (ex. nestle.com), renseignez-le : la vérification DNS, le format dominant et le score de confiance deviennent plus fiables." />
           </div>
           <input
             value={value.domaine}

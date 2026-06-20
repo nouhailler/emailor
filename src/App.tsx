@@ -18,6 +18,11 @@ import { ResultsList } from './components/ResultsList';
 import { ScorePanel } from './components/ScorePanel';
 import { SettingsDialog } from './components/SettingsDialog';
 import { usePublicOnly } from './components/ComplianceNotice';
+import { useOnboarding } from './hooks/useOnboarding';
+import { Onboarding } from './components/Onboarding';
+import { HelpButton } from './components/HelpButton';
+import { TipsRotator } from './components/TipsRotator';
+import { DemoBanner } from './components/DemoBanner';
 import type { SearchInput } from './types';
 
 export function App() {
@@ -30,11 +35,13 @@ export function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [showConfigNotice, setShowConfigNotice] = useState(false);
   const [smtpResult, setSmtpResult] = useState<SmtpResult | null>(null);
+  const [demoMode, setDemoMode] = useState(false);
 
   const search = useEmailSearch();
   const settings = useSettings();
   const [publicOnly, setPublicOnly] = usePublicOnly();
   const caps = useDesktopCapabilities();
+  const onboarding = useOnboarding();
 
   const patchForm = useCallback((patch: Partial<SearchInput>) => setForm((f) => ({ ...f, ...patch })), []);
 
@@ -59,6 +66,7 @@ export function App() {
 
   const launchSearch = () => {
     setSmtpResult(null);
+    setDemoMode(false);
     // Exception : fournisseur d'email personnel (gmail…) → adresses perso, sans LLM.
     const personal = maybePersonalSearch(form);
     if (personal) {
@@ -78,12 +86,15 @@ export function App() {
   // Démo explicite à données FICTIVES (le cas vedette « Dupont »).
   const launchDemo = () => {
     setSmtpResult(null);
+    setDemoMode(true);
     setShowConfigNotice(false);
-    search.run(form, simulatedSearchService);
+    setForm({ prenom: 'Roger', nom: 'Dupont', societe: 'Nestlé', domaine: '' });
+    search.run({ prenom: 'Roger', nom: 'Dupont', societe: 'Nestlé', domaine: '' }, simulatedSearchService);
   };
 
   const resetSearch = () => {
     setSmtpResult(null);
+    setDemoMode(false);
     setShowConfigNotice(false);
     search.reset();
   };
@@ -140,6 +151,7 @@ export function App() {
                 Recherche d'email
               </div>
               <button
+                data-tour="model"
                 onClick={openSettings}
                 style={sx(
                   'display:inline-flex;align-items:center;gap:6px;border:none;background:transparent;cursor:pointer;font-family:inherit;font-size:11px;font-weight:700;color:rgba(0,0,0,0.5);padding:2px 8px;border-radius:7px;margin-top:1px;',
@@ -155,8 +167,14 @@ export function App() {
                 {modelChipLabel}
               </button>
             </div>
-            {/* Espaceur pour conserver le titre centré */}
-            <div style={sx('width:160px;flex:none;')} />
+            {/* Bouton d'aide (visite guidée, démo, astuces) */}
+            <div style={sx('width:160px;flex:none;display:flex;justify-content:flex-end;')}>
+              <HelpButton
+                onStartTour={onboarding.start}
+                onDemo={launchDemo}
+                onOpenSettings={openSettings}
+              />
+            </div>
           </div>
 
           {/* Corps deux colonnes */}
@@ -168,21 +186,30 @@ export function App() {
               )}
             >
               <div style={sx('padding:22px 20px;display:flex;flex-direction:column;')}>
-                <SearchForm
-                  value={form}
-                  searching={searching}
-                  onChange={patchForm}
-                  onSubmit={launchSearch}
-                />
-                <PingAddress suggestedEmail={search.best?.email ?? ''} />
-                <ReasoningPanel searching={searching} reasoning={search.reasoning} />
+                <div data-tour="search">
+                  <SearchForm
+                    value={form}
+                    searching={searching}
+                    onChange={patchForm}
+                    onSubmit={launchSearch}
+                  />
+                </div>
+                <div data-tour="ping">
+                  <PingAddress suggestedEmail={search.best?.email ?? ''} />
+                </div>
+                <div data-tour="reasoning">
+                  <ReasoningPanel searching={searching} reasoning={search.reasoning} />
+                </div>
               </div>
             </div>
 
             {/* Droite : résultats */}
             <div style={sx('flex:1;background:#fafafb;display:flex;flex-direction:column;min-width:0;overflow:auto;')}>
               <div style={sx('padding:22px 28px;display:flex;flex-direction:column;min-height:100%;')}>
-                <div style={sx('display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;')}>
+                <div
+                  data-tour="results"
+                  style={sx('display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;')}
+                >
                   <div style={sx('font-size:17px;font-weight:700;color:rgba(0,0,0,0.85);')}>Résultats</div>
                   {hasResults && (
                     <button
@@ -258,9 +285,29 @@ export function App() {
                       <br />
                       puis lancez la recherche assistée par l'IA.
                     </div>
+                    <div style={sx('display:flex;gap:10px;flex-wrap:wrap;justify-content:center;')}>
+                      <button
+                        onClick={launchDemo}
+                        style={sx(
+                          'border:none;background:#9141ac;color:#fff;border-radius:9px;padding:9px 16px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;',
+                        )}
+                      >
+                        ▶ Lancer la démo (données fictives)
+                      </button>
+                      <button
+                        onClick={onboarding.start}
+                        style={sx(
+                          'border:1px solid rgba(0,0,0,0.14);background:#fff;border-radius:9px;padding:9px 16px;font-family:inherit;font-size:13px;font-weight:700;color:rgba(0,0,0,0.7);cursor:pointer;',
+                        )}
+                      >
+                        🧭 Visite guidée
+                      </button>
+                    </div>
+                    <TipsRotator />
                   </div>
                 ) : (
                   <div>
+                    {demoMode && <DemoBanner onExit={resetSearch} />}
                     <ResultsList
                       best={search.best}
                       showBest={!!search.best && search.phase === 'done'}
@@ -304,6 +351,10 @@ export function App() {
               onClose={closeSettings}
               onSave={saveSettings}
             />
+          )}
+
+          {onboarding.open && !settingsOpen && (
+            <Onboarding onClose={onboarding.finish} onDemo={launchDemo} />
           )}
     </div>
   );
