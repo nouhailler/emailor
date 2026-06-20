@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { sx } from '../lib/style';
 import { sectionLabel } from '../lib/theme';
-import { SmtpVerify } from './SmtpVerify';
+import { SmtpVerify, type VerifyOption } from './SmtpVerify';
 import type { SmtpResult } from '../services/desktopApi';
 import type {
   Candidate,
@@ -22,9 +22,9 @@ interface Props {
   format: EmailFormat | null;
   sources: Source[];
   candidates: Candidate[];
-  /** Shell natif avec SMTP réel disponible (desktop). */
-  nativeSmtp?: boolean;
-  /** Mode « sources publiques uniquement » : désactive les sondes actives (SMTP). */
+  /** Méthodes de vérification disponibles (sonde SMTP locale + fournisseurs configurés). */
+  verifyOptions?: VerifyOption[];
+  /** Mode « sources publiques uniquement » : désactive les sondes actives (SMTP/API). */
   publicOnly?: boolean;
   /** Confiance calculée pour l'adresse retenue (remplace le score brut sur la carte). */
   computedScore?: number | null;
@@ -375,7 +375,7 @@ export function ResultsList({
   format,
   sources,
   candidates,
-  nativeSmtp,
+  verifyOptions,
   publicOnly,
   computedScore,
   onSmtpResult,
@@ -436,18 +436,19 @@ export function ResultsList({
 
       {showBest &&
         best &&
-        nativeSmtp &&
+        verifyOptions &&
+        verifyOptions.length > 0 &&
         (publicOnly ? (
           <div
             style={sx(
               'margin:-8px 0 20px;font-size:12px;line-height:1.5;color:rgba(0,0,0,0.5);background:#fdf6e3;border:1px solid #efe1a6;border-radius:9px;padding:9px 12px;',
             )}
           >
-            Vérification SMTP réelle disponible (shell natif). Désactivez «&nbsp;Sources publiques
+            Vérification réelle disponible (SMTP local / API). Désactivez «&nbsp;Sources publiques
             uniquement&nbsp;» dans les Paramètres pour l'activer.
           </div>
         ) : (
-          <SmtpVerify email={best.email} onResult={onSmtpResult} />
+          <SmtpVerify email={best.email} options={verifyOptions} onResult={onSmtpResult} />
         ))}
 
       {domains.length > 0 && <DomainsSection domains={domains} />}

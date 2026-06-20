@@ -3,11 +3,14 @@ import { sx } from './lib/style';
 import { modelNameFromId } from './services/openRouter';
 import { simulatedSearchService } from './services/searchService';
 import { createOpenRouterSearchService } from './services/openRouterSearch';
+import { createHunterSearchService } from './services/hunterSearch';
 import { maybePersonalSearch } from './services/personalEmailSearch';
 import { computeScore, type ScoreContext } from './services/scoring';
 import type { SmtpResult } from './services/desktopApi';
+import type { VerifyOption } from './components/SmtpVerify';
 import { useEmailSearch } from './hooks/useEmailSearch';
 import { useSettings } from './hooks/useSettings';
+import { useProviders } from './hooks/useProviders';
 import { useDesktopCapabilities } from './hooks/useDesktopCapabilities';
 import { SearchForm } from './components/SearchForm';
 import { PingAddress } from './components/PingAddress';
@@ -39,6 +42,7 @@ export function App() {
 
   const search = useEmailSearch();
   const settings = useSettings();
+  const providers = useProviders();
   const [publicOnly, setPublicOnly] = usePublicOnly();
   const caps = useDesktopCapabilities();
   const onboarding = useOnboarding();
@@ -64,6 +68,28 @@ export function App() {
     [settings.apiKey, settings.selectedModel],
   );
 
+  // Service de recherche RÉEL via Hunter.io (data réelle + sources publiques).
+  const hunterService = useMemo(
+    () => createHunterSearchService(() => providers.keys.hunter),
+    [providers.keys.hunter],
+  );
+
+  // Recherche Hunter possible si une clé est saisie et que le backend natif est là
+  // (le proxy /api/find n'existe qu'en desktop).
+  const hunterReady = providers.has('hunter') && caps.providers;
+
+  // Méthodes de vérification disponibles : sonde SMTP locale + fournisseurs configurés.
+  // Tout passe par le backend natif (port 25 local OU API tierce insensible au port 25).
+  const verifyOptions = useMemo<VerifyOption[]>(() => {
+    if (!caps.smtp && !caps.providers) return [];
+    const opts: VerifyOption[] = [];
+    if (caps.smtp) opts.push({ id: 'smtp', label: 'SMTP' });
+    if (caps.providers && providers.has('hunter')) opts.push({ id: 'hunter', label: 'Hunter', key: providers.keys.hunter });
+    if (caps.providers && providers.has('abstract')) opts.push({ id: 'abstract', label: 'Abstract', key: providers.keys.abstract });
+    if (caps.providers && providers.has('zerobounce')) opts.push({ id: 'zerobounce', label: 'ZeroBounce', key: providers.keys.zerobounce });
+    return opts;
+  }, [caps.smtp, caps.providers, providers]);
+
   const launchSearch = () => {
     setSmtpResult(null);
     setDemoMode(false);
@@ -72,6 +98,12 @@ export function App() {
     if (personal) {
       setShowConfigNotice(false);
       search.run(form, personal);
+      return;
+    }
+    // Priorité à Hunter.io quand il est configuré : data réelle + sources publiques.
+    if (hunterReady) {
+      setShowConfigNotice(false);
+      search.run(form, hunterService);
       return;
     }
     // Sinon, recherche réelle via OpenRouter si configuré.
@@ -317,7 +349,7 @@ export function App() {
                       format={search.format}
                       sources={search.sources}
                       candidates={search.candidates}
-                      nativeSmtp={caps.smtp}
+                      verifyOptions={verifyOptions}
                       publicOnly={publicOnly}
                       computedScore={search.phase === 'done' ? (score?.total ?? null) : null}
                       onSmtpResult={setSmtpResult}
@@ -346,6 +378,7 @@ export function App() {
           {settingsOpen && (
             <SettingsDialog
               settings={settings}
+              providers={providers}
               publicOnly={publicOnly}
               onPublicOnlyChange={setPublicOnly}
               onClose={closeSettings}

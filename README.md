@@ -61,6 +61,34 @@ fournisseurs anti-énumération (M365, Google, Proofpoint) répondent 250 à tou
 → détecté comme *catch-all / indéterminé*. En mode web (navigateur), `/api/*` n'existe
 pas → la fonctionnalité est simplement masquée.
 
+### Fournisseurs de données (Hunter, Abstract, ZeroBounce)
+
+En plus du LLM + DNS, l'app peut s'appuyer sur des **API tierces réelles** (clés
+saisies dans les Paramètres → section « Fournisseurs de données »). **Les clés ne
+quittent jamais la machine** : elles sont relayées par le backend natif
+(`desktop/providers.py`, endpoints `/api/find` et `/api/verify`), donc **pas de CORS
+ni de clé exposée au navigateur**. Ces fonctions ne sont donc actives qu'en **desktop**.
+
+- **Hunter.io — recherche + vérification.** Quand une clé Hunter est présente, la
+  recherche bascule sur le service réel `hunterSearch.ts` (Email Finder) : adresse la
+  plus probable, score, format (pattern) et — précieux — les **sources publiques
+  réelles** où l'adresse a été observée. Le signal de score « adresse observée
+  publiquement » (+40) peut alors s'activer **honnêtement**.
+- **Abstract & ZeroBounce — vérification de délivrabilité.** Ils valident une adresse
+  **depuis leurs serveurs**, donc **insensibles au port 25 sortant bloqué** (VPN/FAI)
+  qui fait échouer la sonde SMTP locale. Réponses normalisées vers le même vocabulaire
+  que la sonde locale (*deliverable / undeliverable / catch-all / unknown…*).
+
+Sous l'adresse identifiée, le bouton de vérification propose **toutes les méthodes
+configurées** : « Vérifier la boîte (SMTP) » (sonde locale) + « Vérifier via Hunter /
+Abstract / ZeroBounce ». Toutes alimentent le même score de confiance. Priorité de la
+recherche : email perso (gmail…) → **Hunter** (si clé) → modèle OpenRouter → invite de
+configuration.
+
+> ⚠️ Ces API sont **officielles et conformes** (contrairement au scraping), mais le
+> RGPD s'applique toujours : le mode « Sources publiques uniquement » désactive aussi
+> ces vérifications actives.
+
 ## Architecture
 
 État local via hooks ; aucun store global. Style inline fidèle à la maquette,
@@ -79,6 +107,8 @@ src/
   services/
     searchService.ts          Interfaces (SearchService/handlers) + service simulé
     openRouterSearch.ts       Service RÉEL : LLM OpenRouter + DNS réel → scénario honnête
+    hunterSearch.ts           Service RÉEL : Hunter.io Email Finder + DNS + sources réelles
+    providerApi.ts            Pont front → backend pour la recherche Hunter (/api/find)
     personalEmailSearch.ts    Exception : adresses perso (gmail…) sans LLM
     freeProviders.ts          Détection des fournisseurs perso + génération de formats
     techCheck.ts              Section « vérif technique » à partir du DNS réel (partagé)

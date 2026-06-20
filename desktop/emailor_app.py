@@ -19,6 +19,7 @@ import urllib.parse
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 
+import providers
 import smtp_verify
 
 import gi
@@ -54,12 +55,23 @@ class _QuietHandler(SimpleHTTPRequestHandler):
 
     def do_GET(self):  # noqa: N802 (API imposée par BaseHTTPRequestHandler)
         parsed = urllib.parse.urlparse(self.path)
+        q = urllib.parse.parse_qs(parsed.query)
+        one = lambda k: (q.get(k) or [""])[0]  # noqa: E731
         if parsed.path == "/api/health":
-            # Signale au front que les capacités natives (SMTP réel) sont disponibles.
-            return self._json({"desktop": True, "smtp": True})
+            # Signale au front les capacités natives (SMTP réel + proxy fournisseurs).
+            return self._json({"desktop": True, "smtp": True, "providers": True})
         if parsed.path == "/api/smtp":
-            email = (urllib.parse.parse_qs(parsed.query).get("email") or [""])[0]
-            return self._json(smtp_verify.verify_email(email))
+            return self._json(smtp_verify.verify_email(one("email")))
+        if parsed.path == "/api/verify":
+            # Vérification via fournisseur tiers (Hunter/Abstract/ZeroBounce).
+            return self._json(providers.verify(one("provider"), one("email"), one("key")))
+        if parsed.path == "/api/find":
+            # Recherche d'adresse via fournisseur (Hunter Email Finder).
+            return self._json(
+                providers.find(
+                    one("source"), one("domain"), one("company"), one("first"), one("last"), one("key")
+                )
+            )
         return super().do_GET()
 
 

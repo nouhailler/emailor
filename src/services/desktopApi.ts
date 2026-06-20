@@ -7,6 +7,8 @@ import { log } from '../lib/logStore';
 export interface Capabilities {
   desktop: boolean;
   smtp: boolean;
+  /** Le backend peut relayer les API tierces (Hunter/Abstract/ZeroBounce). */
+  providers: boolean;
 }
 
 export type SmtpStatus =
@@ -18,7 +20,11 @@ export type SmtpStatus =
   | 'timeout'
   | 'unreachable'
   | 'smtp_error'
+  | 'provider_error'
   | 'invalid_syntax';
+
+/** Méthode de vérification : sonde SMTP locale, ou API d'un fournisseur tiers. */
+export type VerifyMethod = 'smtp' | 'hunter' | 'abstract' | 'zerobounce';
 
 export interface SmtpResult {
   email: string;
@@ -29,7 +35,11 @@ export interface SmtpResult {
   code_catchall?: number | null;
   catch_all?: boolean;
   message?: string;
-  /** Trace détaillée du dialogue (DNS → TCP:25 → SMTP) renvoyée par le backend natif. */
+  /** Fournisseur ayant produit le résultat (si vérif via API tierce). */
+  provider?: string;
+  /** Score de fiabilité 0–100 renvoyé par le fournisseur (si disponible). */
+  score?: number;
+  /** Trace détaillée du dialogue (DNS → TCP:25 → SMTP, ou appel API) renvoyée par le backend. */
   trace?: string[];
 }
 
@@ -42,13 +52,13 @@ export function getCapabilities(): Promise<Capabilities> {
     capsPromise = fetch('/api/health', { cache: 'no-store' })
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error('no api'))))
       .then((j) => {
-        const caps = { desktop: !!j.desktop, smtp: !!j.smtp };
-        log.in(`/api/health → desktop=${caps.desktop} smtp=${caps.smtp} (mode natif)`);
+        const caps = { desktop: !!j.desktop, smtp: !!j.smtp, providers: !!j.providers };
+        log.in(`/api/health → desktop=${caps.desktop} smtp=${caps.smtp} providers=${caps.providers} (mode natif)`);
         return caps;
       })
       .catch(() => {
-        log.info('/api/health absent → mode navigateur (vérif SMTP indisponible)');
-        return { desktop: false, smtp: false };
+        log.info('/api/health absent → mode navigateur (vérif SMTP/API indisponible)');
+        return { desktop: false, smtp: false, providers: false };
       });
   }
   return capsPromise;
@@ -83,4 +93,37 @@ export async function verifySmtp(email: string): Promise<SmtpResult> {
     .join(' · ');
   log.in(`/api/smtp → ${detail}`);
   return result;
+}
+
+/** Vérification via une API tierce (Hunter/Abstract/ZeroBounce) relayée par le backend. */
+async function verifyViaProvider(email: string, provider: VerifyMethod, key: string): Promise<SmtpResult> {
+  log.out(`GET /api/verify?provider=${provider}&email=${email} (vérification via ${provider})`);
+  let r: Response;
+  try {
+    r = await fetch(
+      `/api/verify?provider=${provider}&email=${encodeURIComponent(email)}&key=${encodeURIComponent(key)}`,
+      { cache: 'no-store' },
+    );
+  } catch (e) {
+    log.err(`/api/verify injoignable — ${e instanceof Error ? e.message : e}`);
+    throw e;
+  }
+  if (!r.ok) {
+    log.err(`/api/verify → HTTP ${r.status}`);
+    throw new Error(`HTTP ${r.status}`);
+  }
+  const result = (await r.json()) as SmtpResult;
+  log.info(`── trace ${provider} (${email}) ──`);
+  for (const line of result.trace ?? []) log.info(`  ${line}`);
+  log.in(`/api/verify (${provider}) → ${result.status}${result.catch_all ? ' · catch-all' : ''}`);
+  return result;
+}
+
+/**
+ * Vérifie une adresse par la méthode choisie : sonde SMTP locale (port 25) ou API
+ * d'un fournisseur tiers (insensible au blocage du port 25). Toutes renvoient le
+ * même `SmtpResult`, donc l'UI et le score restent identiques.
+ */
+export function verifyEmail(email: string, method: VerifyMethod, key = ''): Promise<SmtpResult> {
+  return method === 'smtp' ? verifySmtp(email) : verifyViaProvider(email, method, key);
 }

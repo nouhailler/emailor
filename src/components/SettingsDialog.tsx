@@ -1,19 +1,24 @@
 import { formatCtx } from '../services/openRouter';
 import { sx } from '../lib/style';
 import type { Settings } from '../hooks/useSettings';
+import type { Providers, ProviderName } from '../hooks/useProviders';
 import { ComplianceNotice } from './ComplianceNotice';
 import { NameNormalizationRules } from './NameNormalizationRules';
+import { ProvidersSection } from './ProvidersSection';
 import { LogConsole } from './LogConsole';
 
 interface Props {
   settings: Settings;
+  providers: Providers;
   publicOnly: boolean;
   onPublicOnlyChange: (v: boolean) => void;
   onClose: () => void;
   onSave: () => void;
 }
 
-export function SettingsDialog({ settings, publicOnly, onPublicOnlyChange, onClose, onSave }: Props) {
+export type { ProviderName };
+
+export function SettingsDialog({ settings, providers, publicOnly, onPublicOnlyChange, onClose, onSave }: Props) {
   const {
     apiKey,
     showKey,
@@ -197,6 +202,9 @@ export function SettingsDialog({ settings, publicOnly, onPublicOnlyChange, onClo
               })}
             </div>
           </div>
+
+          {/* Fournisseurs de données tiers (Hunter / Abstract / ZeroBounce) */}
+          <ProvidersSection providers={providers} />
 
           {/* Conformité */}
           <ComplianceNotice publicOnly={publicOnly} onChange={onPublicOnlyChange} />
