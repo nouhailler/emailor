@@ -30,6 +30,7 @@ mkdir -p "$STAGE/usr/share/icons/hicolor/scalable/apps"
 cp -r "$ROOT/dist" "$STAGE/usr/lib/$PKG/dist"
 cp "$ROOT/desktop/emailor_app.py" "$STAGE/usr/lib/$PKG/desktop/"
 cp "$ROOT/desktop/smtp_verify.py" "$STAGE/usr/lib/$PKG/desktop/"
+cp "$ROOT/desktop/providers.py" "$STAGE/usr/lib/$PKG/desktop/"
 cp "$ROOT/desktop/emailor.svg" "$STAGE/usr/lib/$PKG/desktop/"
 cp "$ROOT/desktop/emailor.svg" "$STAGE/usr/share/icons/hicolor/scalable/apps/$PKG.svg"
 
