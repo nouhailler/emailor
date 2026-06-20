@@ -1,3 +1,4 @@
+import { log } from '../lib/logStore';
 import { lookupDomain, type DomainLookup } from './dns';
 import { buildUserPrompt, SYSTEM_PROMPT } from './llmPrompt';
 import { revealScenario } from './revealScenario';
@@ -75,6 +76,8 @@ async function callLLM(
   config: OpenRouterConfig,
   signal: AbortSignal,
 ): Promise<LlmResult> {
+  log.out(`POST openrouter.ai/api/v1/chat/completions · model=${config.model}`);
+  const t0 = performance.now();
   const res = await fetch(CHAT_URL, {
     method: 'POST',
     headers: {
@@ -96,10 +99,12 @@ async function callLLM(
   });
   if (!res.ok) {
     const body = await res.text().catch(() => '');
+    log.err(`OpenRouter → HTTP ${res.status} ${body.slice(0, 120)}`);
     throw new Error(`OpenRouter ${res.status} — ${body.slice(0, 160)}`);
   }
   const json = (await res.json()) as { choices?: { message?: { content?: string } }[] };
   const content = json.choices?.[0]?.message?.content ?? '';
+  log.in(`OpenRouter → ${content.length} car. de réponse (${Math.round(performance.now() - t0)} ms)`);
   if (!content) throw new Error('Réponse vide du modèle.');
   return parseLoose(content);
 }

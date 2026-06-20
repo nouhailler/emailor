@@ -3,6 +3,7 @@ import { sx } from '../lib/style';
 import type { Settings } from '../hooks/useSettings';
 import { ComplianceNotice } from './ComplianceNotice';
 import { NameNormalizationRules } from './NameNormalizationRules';
+import { LogConsole } from './LogConsole';
 
 interface Props {
   settings: Settings;
@@ -202,6 +203,9 @@ export function SettingsDialog({ settings, publicOnly, onPublicOnlyChange, onClo
 
           {/* Normalisation des noms */}
           <NameNormalizationRules />
+
+          {/* Journal réseau (diagnostic port 25 / DNS / OpenRouter) */}
+          <LogConsole />
         </div>
 
         {/* Pied */}

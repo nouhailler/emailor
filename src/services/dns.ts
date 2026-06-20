@@ -2,6 +2,8 @@
 // Google). Passif et public — utilisé pour vérifier qu'un domaine sait recevoir des
 // emails (MX) et pour déduire le fournisseur mail. Aucune donnée n'est inventée.
 
+import { log } from '../lib/logStore';
+
 export interface MxRecord {
   priority: number;
   host: string;
@@ -38,12 +40,29 @@ async function doh(
   type: 'MX' | 'A',
   signal?: AbortSignal,
 ): Promise<DohResponse> {
-  const res = await fetch(`${url}?name=${encodeURIComponent(name)}&type=${type}`, {
-    headers: { accept: 'application/dns-json' },
-    signal,
-  });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return (await res.json()) as DohResponse;
+  const host = (() => {
+    try {
+      return new URL(url).host;
+    } catch {
+      return url;
+    }
+  })();
+  log.out(`DoH ${type} ${name} @ ${host}`);
+  const t0 = performance.now();
+  try {
+    const res = await fetch(`${url}?name=${encodeURIComponent(name)}&type=${type}`, {
+      headers: { accept: 'application/dns-json' },
+      signal,
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = (await res.json()) as DohResponse;
+    const n = (json.Answer ?? []).length;
+    log.in(`DoH ${type} ${name} → Status ${json.Status}, ${n} réponse(s) (${Math.round(performance.now() - t0)} ms)`);
+    return json;
+  } catch (e) {
+    log.err(`DoH ${type} ${name} @ ${host} → ${e instanceof Error ? e.message : e}`);
+    throw e;
+  }
 }
 
 /** Parse une donnée MX DoH (« 10 mx1.example.com. ») en { priority, host }. */

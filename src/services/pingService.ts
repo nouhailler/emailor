@@ -7,6 +7,8 @@
 // Cette sonde est passive et publique : compatible avec le mode « sources publiques
 // uniquement ».
 
+import { log } from '../lib/logStore';
+
 export type PingStatus =
   | 'invalid_syntax' // l'adresse n'est pas une adresse email valide
   | 'mx_ok' //          le domaine a des MX → peut recevoir des emails
@@ -52,13 +54,19 @@ const RESOLVERS = [
 async function doh(resolver: string, name: string, type: 'MX' | 'A'): Promise<DohResponse> {
   const ctrl = new AbortController();
   const to = setTimeout(() => ctrl.abort(), 6000);
+  log.out(`Ping · DoH ${type} ${name}`);
   try {
     const res = await fetch(`${resolver}?name=${encodeURIComponent(name)}&type=${type}`, {
       headers: { accept: 'application/dns-json' },
       signal: ctrl.signal,
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return (await res.json()) as DohResponse;
+    const json = (await res.json()) as DohResponse;
+    log.in(`Ping · DoH ${type} ${name} → Status ${json.Status}, ${(json.Answer ?? []).length} réponse(s)`);
+    return json;
+  } catch (e) {
+    log.err(`Ping · DoH ${type} ${name} → ${e instanceof Error ? e.message : e}`);
+    throw e;
   } finally {
     clearTimeout(to);
   }
